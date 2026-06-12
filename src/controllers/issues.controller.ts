@@ -179,3 +179,30 @@ export const updateIssue = async (req: Request, res: Response): Promise<void> =>
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
     }
 }
+
+// Delete Issue
+export const deleteIssue = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        if (req.user!.role !== 'maintainer') {
+            res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Only maintainers can remove entries.' });
+            return;
+        }
+
+        const checkIssue = await pool.query('SELECT id FROM issues WHERE id = $1', [id]);
+        if (checkIssue.rows.length === 0) {
+            res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Issue not found.' });
+            return;
+        }
+
+        await pool.query('DELETE FROM issues WHERE id = $1', [id]);
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: 'Issue deleted successfully',
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
+    }
+}
