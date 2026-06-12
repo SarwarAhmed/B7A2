@@ -94,3 +94,31 @@ export const getAllIssues = async (req: Request, res: Response): Promise<void> =
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
     }
 }
+
+// Get Single Issue
+export const singleIssue = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const issueResult = await pool.query('SELECT * FROM issues WHERE id = $1', [id]);
+
+        if (issueResult.rows.length === 0) {
+            res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Issue not found.' });
+            return;
+        }
+
+        const issue = issueResult.rows[0];
+        const userResult = await pool.query('SELECT id, name, role FROM users WHERE id = $1', [issue.reporter_id]);
+
+        const { reporter_id, ...issueFields } = issue;
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: 'Issue retrieved successfully',
+            data: {
+                ...issueFields,
+                reporter: userResult.rows[0] || null,
+            },
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
+    }
+}
