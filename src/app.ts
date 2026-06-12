@@ -6,7 +6,6 @@ import issuesRoutes from "./routes/issues.routes";
 
 const app: Application = express();
 const PORT = config.port || 5000;
-
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
