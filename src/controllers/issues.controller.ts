@@ -34,3 +34,63 @@ export const createIssue =  async (req: Request, res: Response): Promise<void> =
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
     }
 }
+
+// Get All Issues with Filtering, Sorting
+export const getAllIssues = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { sort, type, status } = req.query;
+
+        let queryText = 'SELECT * FROM issues WHERE 1=1';
+        const queryParams: any[] = [];
+        let paramCounter = 1;
+
+        if (type === 'bug' || type === 'feature_request') {
+            queryText += ` AND type = $${paramCounter++}`;
+            queryParams.push(type);
+        }
+
+        if (status === 'open' || status === 'in_progress' || status === 'resolved') {
+            queryText += ` AND status = $${paramCounter++}`;
+            queryParams.push(status);
+        }
+
+        const orderBy = sort === 'oldest' ? 'ASC' : 'DESC';
+        queryText += ` ORDER BY created_at ${orderBy}`;
+
+        const issuesResult = await pool.query(queryText, queryParams);
+        const issues = issuesResult.rows;
+
+        if (issues.length === 0) {
+            res.status(StatusCodes.OK).json({ success: true, message: 'Issues retrieved successfully', data: [] });
+            return;
+        }
+
+        // Avoid JOINs by pulling reporter data separately via an IN clause batch query
+        const userIds = Array.from(new Set(issues.map((i) => i.reporter_id)));
+        const usersResult = await pool.query(
+            `SELECT id, name, role FROM users WHERE id = ANY($1)`,
+            [userIds]
+        );
+
+        const userMap = usersResult.rows.reduce((acc: any, user: any) => {
+            acc[user.id] = user;
+            return   acc;
+        }, {});
+
+        const completeData = issues.map((issue) => {
+            const { reporter_id, ...issueFields } = issue;
+            return {
+                ...issueFields,
+                reporter: userMap[reporter_id] || null,
+            };
+        });
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: 'Issues retrieved successfully',
+            data: completeData,
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
+    }
+}
