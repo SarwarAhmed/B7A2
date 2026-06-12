@@ -2,7 +2,7 @@ import {Pool} from 'pg';
 import config from "../config";
 
 
-const pool = new Pool({
+export const pool = new Pool({
     // connectionString: config.connectionString,
 
     // Local connection

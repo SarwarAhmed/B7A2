@@ -1,6 +1,7 @@
 import express, {type Application, type NextFunction, type Request, type Response} from "express";
 import config from "./config";
 import {StatusCodes} from "http-status-codes";
+import authRoutes from "./routes/auth.routes";
 
 const app: Application = express();
 const PORT = config.port || 5000;
@@ -10,6 +11,9 @@ app.use(express.json());
 app.get("/", (req: Request, res: Response) => {
     res.send(`Server is running on port ${PORT}`);
 })
+
+// Main App API
+app.use('/api/auth', authRoutes);
 
 // Not Found Middleware
 app.use((req: Request, res: Response) => {
