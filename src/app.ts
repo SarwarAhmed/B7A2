@@ -2,6 +2,7 @@ import express, {type Application, type NextFunction, type Request, type Respons
 import config from "./config";
 import {StatusCodes} from "http-status-codes";
 import authRoutes from "./routes/auth.routes";
+import issuesRoutes from "./routes/issues.routes";
 
 const app: Application = express();
 const PORT = config.port || 5000;
@@ -14,6 +15,7 @@ app.get("/", (req: Request, res: Response) => {
 
 // Main App API
 app.use('/api/auth', authRoutes);
+app.use('/api/issues', issuesRoutes);
 
 // Not Found Middleware
 app.use((req: Request, res: Response) => {
