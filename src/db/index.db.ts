@@ -3,14 +3,14 @@ import config from "../config";
 
 
 export const pool = new Pool({
-    // connectionString: config.connectionString,
+    connectionString: config.connectionString,
 
     // Local connection
-    user: 'himaloy',
-    host: 'localhost',
-    database: 'express_api',
-    password: '',
-    port: 5432,
+    // user: 'himaloy',
+    // host: 'localhost',
+    // database: 'express_api',
+    // password: '',
+    // port: 5432,
 });
 
 export const initDb = async () => {
