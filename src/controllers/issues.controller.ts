@@ -122,3 +122,60 @@ export const singleIssue = async (req: Request, res: Response): Promise<void> =>
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
     }
 }
+
+// Update issue
+export const updateIssue = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { title, description, type, status } = req.body;
+        const currentUser = req.user!;
+
+        const issueResult = await pool.query('SELECT * FROM issues WHERE id = $1', [id]);
+        if (issueResult.rows.length === 0) {
+            res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Issue not found.' });
+            return;
+        }
+
+        const issue = issueResult.rows[0];
+
+        // Access Checking Logic
+        if (currentUser.role !== 'maintainer') {
+            if (issue.reporter_id !== currentUser.id) {
+                res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Access denied. This is not your issue.' });
+                return;
+            }
+            if (issue.status !== 'open') {
+                res.status(StatusCodes.CONFLICT).json({ success: false, message: 'Contributors can only modify open issues.' });
+                return;
+            }
+            if (status) {
+                res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Only maintainers can shift issue status stages.' });
+                return;
+            }
+        }
+
+        // Apply fields dynamically or fall back to previous records
+        const updatedTitle = title !== undefined ? title : issue.title;
+        const updatedDesc = description !== undefined ? description : issue.description;
+        const updatedType = type !== undefined ? type : issue.type;
+        const updatedStatus = status !== undefined ? status : issue.status;
+
+        if (updatedTitle.length > 150 || updatedDesc.length < 20) {
+            res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Validation mismatch on text fields.' });
+            return;
+        }
+
+        const updateResult = await pool.query(
+            'UPDATE issues SET title = $1, description = $2, type = $3, status = $4 WHERE id = $5 RETURNING *',
+            [updatedTitle, updatedDesc, updatedType, updatedStatus, id]
+        );
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: 'Issue updated successfully',
+            data: updateResult.rows[0],
+        });
+    } catch (error: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message });
+    }
+}
